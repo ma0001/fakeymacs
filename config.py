@@ -262,6 +262,7 @@ def configure(keymap):
                                "emacs.exe",              # Emacs
                                "emacs-X11.exe",          # Emacs
                                "emacs-w32.exe",          # Emacs
+			       "emacs-27.2.exe",	 # Emacs
                                "gvim.exe",               # GVim
                                "xyzzy.exe",              # xyzzy
                                "VirtualBox.exe",         # VirtualBox
@@ -358,15 +359,15 @@ def configure(keymap):
     fc.ctl_x_prefix_key = "C-x"
 
     # スクロールに使うキーの組み合わせ（Up、Down の順）を指定する
-    # fc.scroll_key = None # PageUp、PageDownキーのみを利用する
-    fc.scroll_key = ["M-v", "C-v"]
+    fc.scroll_key = None # PageUp、PageDownキーのみを利用する
+    #fc.scroll_key = ["M-v", "C-v"]
 
     # Emacs日本語入力モードを使うかどうかを指定する（True: 使う、False: 使わない）
     fc.use_emacs_ime_mode = True
 
     # Emacs日本語入力モードが有効なときに表示するバルーンメッセージを指定する
-    # fc.emacs_ime_mode_balloon_message = None
-    fc.emacs_ime_mode_balloon_message = "▲"
+    fc.emacs_ime_mode_balloon_message = None
+#    fc.emacs_ime_mode_balloon_message = "▲"
 
     # IME の状態を表示するバルーンメッセージを表示するかどうかを指定する（True: 表示する、False: 表示しない）
     fc.use_ime_status_balloon = True
@@ -377,7 +378,7 @@ def configure(keymap):
     # IME をトグルで切り替えるキーを指定する（複数指定可）
     fc.toggle_input_method_key = []
     fc.toggle_input_method_key += ["C-Yen"]
-    fc.toggle_input_method_key += ["C-o"]
+#    fc.toggle_input_method_key += ["M-Space"]
     # fc.toggle_input_method_key += ["O-LAlt"]
 
     #---------------------------------------------------------------------------------------------------
@@ -402,6 +403,9 @@ def configure(keymap):
 
     ## C-j で英数入力、C-o で日本語入力となる（toggle_input_method_key の設定より優先）
     # fc.set_input_method_key += [["C-j", "C-o"]]
+
+    ## C-j で英数入力、C-i で日本語入力となる（C-i が Tab として利用できなくなる）
+    # fc.set_input_method_key += [["C-j", "C-i"]]
     #---------------------------------------------------------------------------------------------------
 
     #---------------------------------------------------------------------------------------------------
@@ -577,10 +581,10 @@ def configure(keymap):
     fc.window_operation_exclusion_process = r"RocketDock\.exe$"  # サンプルとして RocketDock.exe を登録
 
     # クリップボードリストを起動するキーを指定する
-    fc.clipboardList_key = "A-y"
+#    fc.clipboardList_key = "A-y"
 
     # ランチャーリストを起動するキーを指定する
-    fc.lancherList_key = "A-l"
+#    fc.lancherList_key = "A-l"
 
     # shell_command 関数で起動するアプリケーションソフトを指定する
     # （PATH が通っていない場所にあるコマンドは、絶対パスで指定してください）
@@ -2369,7 +2373,7 @@ def configure(keymap):
         keymap.command_ClipboardList()
 
     # クリップボードリストを起動する
-    define_key(keymap_global, fc.clipboardList_key, lw_clipboardList)
+#    define_key(keymap_global, fc.clipboardList_key, lw_clipboardList)
 
     # 個人設定ファイルのセクション [section-clipboardList-2] を読み込んで実行する
     exec(readConfigPersonal("[section-clipboardList-2]"), dict(globals(), **locals()))
@@ -2463,7 +2467,7 @@ def configure(keymap):
         keymap.delayedCall(popLancherList, 0)
 
     # ランチャーリストを起動する
-    define_key(keymap_global, fc.lancherList_key, lw_lancherList)
+#    define_key(keymap_global, fc.lancherList_key, lw_lancherList)
 
     # 個人設定ファイルのセクション [section-lancherList-2] を読み込んで実行する
     exec(readConfigPersonal("[section-lancherList-2]"), dict(globals(), **locals()))
