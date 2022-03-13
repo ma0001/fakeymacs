@@ -1,7 +1,7 @@
 ﻿# -*- mode: python; coding: utf-8-with-signature-dos -*-
 
 ####################################################################################################
-## ブラウザ用のキーの設定を行う
+## ブラウザをポップアップしてから C-l、C-t を入力するキーを設定する
 ####################################################################################################
 
 try:
@@ -13,14 +13,35 @@ except:
                       "msedge.exe",
                       "firefox.exe"]
 
-# C-A-l、C-A-t、C-A-k を入力した際、ブラウザをポップアップしてから C-l、C-t、C-k の機能を
-# 実行する。また、アドレスバーに移動した際には IME を OFF にする。
+try:
+    # 設定されているか？
+    fc.browser_key1
+except:
+    # アドレスバーに移動するキーを指定する（IME は OFF）
+    fc.browser_key1 = "C-A-l"
 
-def browser_popup(key, ime_status=0):
+try:
+    # 設定されているか？
+    fc.browser_key2
+except:
+    # 新しいタブを開いてそのタブのアドレスバーに移動するキーを指定する（IME は OFF）
+    fc.browser_key2 = "C-A-t"
+
+try:
+    # 設定されているか？
+    fc.browser_key3
+except:
+    # アドレスバーに移動するキーを指定する（IME は ON）
+    fc.browser_key3 = "C-A-i"
+
+# ブラウザをポップアップしてから指定したキーを実行する。
+
+def browser_popup(key, ime_status):
     def _func():
         for window in getWindowList():
             if window.getProcessName() in fc.browser_list:
                 popWindow(window)()
+                delay()
                 self_insert_command(key)()
                 keymap.delayedCall(lambda: keymap.getWindow().setImeStatus(ime_status), 100)
                 return
@@ -31,5 +52,6 @@ def browser_popup(key, ime_status=0):
 
     return _func
 
-define_key(keymap_global, "C-A-l", browser_popup("C-l"))
-define_key(keymap_global, "C-A-t", browser_popup("C-t"))
+define_key(keymap_global, fc.browser_key1, browser_popup("C-l", 0))
+define_key(keymap_global, fc.browser_key2, browser_popup("C-t", 0))
+define_key(keymap_global, fc.browser_key3, browser_popup("C-l", 1))

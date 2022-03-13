@@ -6,13 +6,13 @@
 
 try:
     # 設定されているか？
-    fc.linux_tool
+    fc.unix_tool
 except:
-    # Linux コマンドを起動するために利用する Linux ツールを指定する
-    fc.linux_tool = "WSL"
-    # fc.linux_tool = "MSYS2"
-    # fc.linux_tool = "Cygwin"
-    # fc.linux_tool = "BusyBox"
+    # Unix コマンドを起動するために利用する Unix ツールを指定する
+    fc.unix_tool = "WSL"
+    # fc.unix_tool = "MSYS2"
+    # fc.unix_tool = "Cygwin"
+    # fc.unix_tool = "BusyBox"
 
 try:
     # 設定されているか？
@@ -45,11 +45,16 @@ except:
 
 import subprocess
 
+class FakeymacsShellCommand:
+    pass
+
+fakeymacs_shell_command = FakeymacsShellCommand()
+
 def shell_command_inputbox():
     if fakeymacs.is_universal_argument:
-        fakeymacs.replace_region = True
+        fakeymacs_shell_command.replace_region = True
     else:
-        fakeymacs.replace_region = False
+        fakeymacs_shell_command.replace_region = False
 
     # inputbox_command = dataPath() + r"\fakeymacs_extensions\shell_command_on_region\inputbox.ahk"
     inputbox_command = dataPath() + r"\fakeymacs_extensions\shell_command_on_region\inputbox.exe"
@@ -80,7 +85,7 @@ def shell_command_on_region():
                 bash_options += fc.bash_options
             bash_options += ["-c"]
 
-            if fc.linux_tool == "WSL":
+            if fc.unix_tool == "WSL":
                 command = [r"C:\WINDOWS\SysNative\wsl.exe", "bash"]
                 command += bash_options
                 command += [r"cd; tr -d '\r' | " + re.sub(r"(\$)", r"\\\1", shell_command)]
@@ -88,21 +93,21 @@ def shell_command_on_region():
                 env["WSLENV"] = "FAKEYMACS:LANG"
                 encoding = "utf-8"
 
-            elif fc.linux_tool == "MSYS2":
+            elif fc.unix_tool == "MSYS2":
                 command = [fc.MSYS2_path + r"\usr\bin\bash.exe"]
                 command += bash_options
                 command += [shell_command]
                 env["LANG"] = "ja_JP.UTF8"
                 encoding = "utf-8"
 
-            elif fc.linux_tool == "Cygwin":
+            elif fc.unix_tool == "Cygwin":
                 command = [fc.Cygwin_path + r"\bin\bash.exe"]
                 command += bash_options
                 command += [r"tr -d '\r' | " + shell_command]
                 env["LANG"] = "ja_JP.UTF8"
                 encoding = "utf-8"
 
-            elif fc.linux_tool == "BusyBox":
+            elif fc.unix_tool == "BusyBox":
                 command = [fc.BusyBox_path + r"\busybox64.exe", "bash"]
                 command += bash_options
                 command += [shell_command]
@@ -140,7 +145,7 @@ def shell_command_on_region():
             if keymap.getWindow().getProcessName() in fc.not_clipboard_target:
                 keymap.clipboard_history._push(stdout_text)
 
-            if fakeymacs.replace_region:
+            if fakeymacs_shell_command.replace_region:
                 # delay() のコールでは yank に失敗することがあるため、delayedCall() 経由で実行する
                 keymap.delayedCall(yank, 30)
         else:

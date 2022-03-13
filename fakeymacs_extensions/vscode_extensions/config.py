@@ -46,13 +46,24 @@ except:
     # Insert Numbers を利用するかどうかを指定する
     fc.vscode_insert_numbers = False
 
+try:
+    # 設定されているか？
+    fc.vscode_keyboard_macro
+except:
+    # Keyboard Macro Beta を利用するかどうかを指定する
+    fc.vscode_keyboard_macro = False
+
+# --------------------------------------------------------------------------------------------------
+
 if fc.vscode_dired:
     def dired():
         # VSCode Command : Open dired buffer
         vscodeExecuteCommand("Odb")()
         # vscodeExecuteCommand("extension.dired.open")()
 
-    define_key3(keymap_emacs, "Ctl-x d",  reset_search(reset_undo(reset_counter(reset_mark(dired)))))
+    define_key_v("Ctl-x d",  reset_search(reset_undo(reset_counter(reset_mark(dired)))))
+
+# --------------------------------------------------------------------------------------------------
 
 if fc.vscode_recenter:
     def recenter():
@@ -60,7 +71,9 @@ if fc.vscode_recenter:
         self_insert_command("C-l")()
         # vscodeExecuteCommand("center-editor-window.center")()
 
-    define_key(keymap_vscode, "C-l", reset_search(reset_undo(reset_counter(recenter))))
+    define_key_v("C-l", reset_search(reset_undo(reset_counter(recenter))))
+
+# --------------------------------------------------------------------------------------------------
 
 if fc.vscode_occur:
     def occur():
@@ -68,7 +81,9 @@ if fc.vscode_occur:
         vscodeExecuteCommand("SiCF")()
         # vscodeExecuteCommand("search-in-current-file.searchInCurrentFile")()
 
-    define_key3(keymap_emacs, "Ctl-x C-o", reset_search(reset_undo(reset_counter(reset_mark(occur)))))
+    define_key_v("Ctl-x C-o", reset_search(reset_undo(reset_counter(reset_mark(occur)))))
+
+# --------------------------------------------------------------------------------------------------
 
 if fc.vscode_quick_select:
     if is_japanese_keyboard:
@@ -85,7 +100,7 @@ if fc.vscode_quick_select:
                              "}" : "S-CloseBracket",
                              "<" : "S-Comma",
                              ">" : "S-Period"
-                            }
+                             }
     else:
         quick_select_keys = {'"' : "S-Quote",
                              "'" : "Quote",
@@ -100,25 +115,56 @@ if fc.vscode_quick_select:
                              "}" : "S-CloseBracket",
                              "<" : "S-Comma",
                              ">" : "S-Period"
-                            }
+                             }
 
     for key in quick_select_keys.values():
         mkey = "C-A-k {}".format(key)
-        define_key(keymap_vscode, mkey, reset_rect(region(getKeyCommand(keymap_vscode, mkey))))
+        define_key_v(mkey, reset_rect(region(getKeyCommand(keymap_vscode, mkey))))
+
+# --------------------------------------------------------------------------------------------------
 
 if fc.vscode_input_sequence:
     def input_sequence():
-        fakeymacs.post_processing = lambda: region(lambda: None)()
+        fakeymacs_vscode.post_processing = lambda: region(lambda: None)()
         self_insert_command3("C-A-0")()
 
     if not fc.use_ctrl_digit_key_for_digit_argument:
-        define_key(keymap_vscode, "C-A-0", reset_rect(input_sequence))
+        define_key_v("C-A-0", reset_rect(input_sequence))
 
-    define_key(keymap_vscode, "C-A-k 0", reset_rect(input_sequence))
+    define_key_v("C-A-k 0", reset_rect(input_sequence))
+
+# --------------------------------------------------------------------------------------------------
 
 if fc.vscode_insert_numbers:
     def insert_numbers():
-        fakeymacs.post_processing = lambda: region(lambda: None)()
+        fakeymacs_vscode.post_processing = lambda: region(lambda: None)()
         self_insert_command3("C-A-n")()
 
-    define_key(keymap_vscode, "C-A-k n", reset_rect(insert_numbers))
+    define_key_v("C-A-k n", reset_rect(insert_numbers))
+
+# --------------------------------------------------------------------------------------------------
+
+if fc.vscode_keyboard_macro:
+    def keyboard_macro_start():
+        self_insert_command("C-A-r")()
+
+    def keyboard_macro_stop():
+        self_insert_command("C-A-r")()
+
+    def keyboard_macro_play():
+        def playMacro():
+            self_insert_command("C-A-p")()
+            delay(0.1)
+
+        keymap.delayedCall(playMacro, 0)
+
+    if is_japanese_keyboard:
+        define_key_v("Ctl-x S-8", keyboard_macro_start)
+        define_key_v("Ctl-x S-9", keyboard_macro_stop)
+    else:
+        define_key_v("Ctl-x S-9", keyboard_macro_start)
+        define_key_v("Ctl-x S-0", keyboard_macro_stop)
+
+    define_key_v("Ctl-x e", reset_search(reset_undo(reset_counter(repeat(keyboard_macro_play)))))
+
+# --------------------------------------------------------------------------------------------------

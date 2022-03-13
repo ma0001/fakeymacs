@@ -9,16 +9,20 @@ try:
     fc.x_window_apps
 except:
     # X Windows アプリケーションソフトのプログラム名称を指定する
-    fc.x_window_apps = ["XWin.exe",               # Cygwin/X
+    fc.x_window_apps = ["mstsc.exe",              # WSLg
+                        "msrdc.exe",              # WSLg
+                        "XWin.exe",               # Cygwin/X
                         "XWin_MobaX.exe",         # MobaXterm/X
                         "XWin_MobaX_1.16.3.exe",  # MobaXterm/X
                         "XWin_Cygwin_1.14.5.exe", # MobaXterm/X
                         "XWin_Cygwin_1.16.3.exe", # MobaXterm/X
                         "Xming.exe",              # Xming
                         "vcxsrv.exe",             # VcXsrv
+                        "GWSL_vcxsrv.exe",        # GWSL
+                        "GWSL_vcxsrv_lowdpi.exe", # GWSL
                         "X410.exe",               # X410
                         "Xpra-Launcher.exe",      # Xpra
-                       ]
+                        ]
 
 def is_real_emacs(window):
     if (window.getClassName() == "Emacs" or

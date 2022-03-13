@@ -19,10 +19,8 @@ VSCode 用のキーの設定を行う拡張機能です。
 |-------------------------------------+-------------------------------------------------------------------------------------------------------|
 
 ※ vscode_target 変数の初期値には、ブラウザのアプリケーションソフトも複数指定しています。
-これは、ブラウザで github1s.com にアクセスしたときに VSCode 用のキーバインドを利用できる
-ようにするためです。github1s.com については、次の記事を参考としてください。
-
-- https://forest.watch.impress.co.jp/docs/serial/yajiuma/1306113.html
+これは、ブラウザで vscode.dev にアクセスしたときに VSCode 用のキーバインドを利用できる
+ようにするためです。
 
 ※ vscode_prefix_key 変数は、VSCode のプレフィックスキーを使う際、後に入力した文字が全角文字で
 入力されることがある問題を対策するために設けた設定です。
@@ -60,27 +58,41 @@ True に設定した場合でも Toggle Terminal 用のキーとして C-<半角
 ※ Fakeymacs のプレフィックスキーを利用することにより、プレフィックスキーの後に入力するキーが
 全角文字で入力されることが無くなります。
 
+**** ● 「ファイル操作」のキー設定
+
+|-----------+----------------+----------------------+--------------------------------|
+| Keybind   | Function       | VSCode Command       | Description                    |
+|-----------+----------------+----------------------+--------------------------------|
+| Ctl-x C-f | find_file      | File: Open File...   | Fakeymacs 標準機能（参考記載） |
+| Ctl-x C-d | find_directory | File: Open Folder... |                                |
+| Ctl-x C-r | recentf        | File: Open Recent... |                                |
+| Ctl-x C-l | locate         | Go to File...        |                                |
+|-----------+----------------+----------------------+--------------------------------|
+
 **** ● 「カーソル移動」のキー設定
 
-|---------+----------------+--------------------------------------------------------+-------------|
-| Keybind | Function       | VSCode Command                                         | Description |
-|---------+----------------+--------------------------------------------------------+-------------|
-| M-g p   | previous_error | Go to Previous Problem in Files (Error, Warning, Info) |             |
-| M-g M-p | previous_error | Go to Previous Problem in Files (Error, Warning, Info) |             |
-| M-g n   | next_error     | Go to Next Problem in Files (Error, Warning, Info)     |             |
-| M-g M-n | next_error     | Go to Next Problem in Files (Error, Warning, Info)     |             |
-| Ctl-x ` | next_error     | Go to Next Problem in Files (Error, Warning, Info)     |             |
-|---------+----------------+--------------------------------------------------------+-------------|
+|---------+-------------------------------+--------------------------------------------------------+------------------------|
+| Keybind | Function                      | VSCode Command                                         | Description            |
+|---------+-------------------------------+--------------------------------------------------------+------------------------|
+| M-g p   | previous_error                | Go to Previous Problem in Files (Error, Warning, Info) |                        |
+| M-g M-p | previous_error                | Go to Previous Problem in Files (Error, Warning, Info) |                        |
+| M-g n   | next_error                    | Go to Next Problem in Files (Error, Warning, Info)     |                        |
+| M-g M-n | next_error                    | Go to Next Problem in Files (Error, Warning, Info)     |                        |
+| Ctl-x ` | next_error                    | Go to Next Problem in Files (Error, Warning, Info)     |                        |
+|---------+-------------------------------+--------------------------------------------------------+------------------------|
+| A-p     | self_insert_command("C-Up")   | -                                                      | キーバインドの置き換え |
+| A-n     | self_insert_command("C-Down") | -                                                      | キーバインドの置き換え |
+|---------+-------------------------------+--------------------------------------------------------+------------------------|
 
 **** ● 「バッファ / ウィンドウ操作」のキー設定
 
-|-----------+------------------+---------------------------------------------------------+-------------------------------------|
-| Keybind   | Function         | VSCode Command                                          | Description                         |
-|-----------+------------------+---------------------------------------------------------+-------------------------------------|
-| Ctl-x k   | kill_buffer      | View: Close Editor                                      | github1s でなければ、A-k も利用可能 |
-| Ctl-x b   | switch_to_buffer | View: Quick Open Privious Recently Used Editor in Group |                                     |
-| Ctl-x C-b | list_buffers     | View: Show All Editors By Most Recently Used            |                                     |
-|-----------+------------------+---------------------------------------------------------+-------------------------------------|
+|-----------+------------------+---------------------------------------------------------+------------------------------------------|
+| Keybind   | Function         | VSCode Command                                          | Description                              |
+|-----------+------------------+---------------------------------------------------------+------------------------------------------|
+| Ctl-x k   | kill_buffer      | View: Close Editor                                      | アプリ版 VSCode であれば、A-k も利用可能 |
+| Ctl-x b   | switch_to_buffer | View: Quick Open Privious Recently Used Editor in Group |                                          |
+| Ctl-x C-b | list_buffers     | View: Show All Editors By Most Recently Used            |                                          |
+|-----------+------------------+---------------------------------------------------------+------------------------------------------|
 
 **** ● 「エディタ操作」のキー設定
 
@@ -91,6 +103,7 @@ True に設定した場合でも Toggle Terminal 用のキーとして C-<半角
 | Ctl-x 1        | delete_other_groups          | View: Close Editors in Other Groups       |             |
 | Ctl-x 2        | split_editor_below           | View: Split Editor Orthogonal             |             |
 | Ctl-x 3        | split_editor_right           | View: Split Editor                        |             |
+| Ctl-x 4        | rotate_layout                | Toggle Vertical/Horizontal Editor Layout  |             |
 | Ctl-x o        | other_group                  | View: Navigate Between Editor Groups      |             |
 | C-<数字キー>   | switch_focus(<数字キーの値>) | View: Focus Side Bar or n-th Editor Group |             |
 | C-A-<数字キー> | switch_focus(<数字キーの値>) | View: Focus Side Bar or n-th Editor Group |             |
@@ -164,7 +177,7 @@ keyboard_quit（C-A-g）を利用してください。（esc_mode_in_keyboard_qu
 | C-<半角/全角>   | toggle_terminal | Terminal: Create New Integrated Terminal | JIS Keyboard の場合 |
 |-----------------+-----------------+------------------------------------------+---------------------|
 
-※ C-@ は、use_ctrl_atmark_for_mark が False の場合に機能します。
+※ C-@ は、use_ctrl_atmark_for_mark 変数が False の場合に機能します。
 
 ※ use_direct_input_in_vscode_terminal 変数を True にしている場合には、上記のいずれかのキーを押下して
 ターミナルに移行することで、４つのキー（C-k、C-r、C-s、C-y）のダイレクト入力ができるようになります。
@@ -262,22 +275,28 @@ def vscodeExecuteCommand(command):
 
 - https://memotora.com/2014/10/05/google-ime-pop-up-setting/
 
-● ブラウザで github1s.com を指定した際に開く VSCode の画面では、M-k や Ctl-x k で
+● ブラウザで vscode.dev を指定した際に開く VSCode の画面では、M-k や Ctl-x k で
 発行している C-F4 がブラウザ側でキャッチされ、ブラウザのタブを閉じようとしてしまいます。
-このため、vscode_target 変数に指定したブラウザで github1s.com を開いて Ctl-x k を実行した
+このため、vscode_target 変数に指定したブラウザで vscode.dev を開いて Ctl-x k を実行した
 場合には、コマンドパレットで View: Close Editor を実行するようにし、VSCode の機能が働くように
 しています。
-M-k は 従来どおり C-F4 を発行するのみの機能としていますので、github1s.com を利用する場合
+M-k は 従来どおり C-F4 を発行するのみの機能としていますので、vscode.dev を利用する場合
 には、M-k と Ctl-x k を使い分けるようにしてください。
-（この対応により、ブラウザで github1s.com を開いていない場合に Ctl-x k を発行すると、
+（この対応により、ブラウザで vscode.dev を開いていない場合に Ctl-x k を発行すると、
 おかしな動き（F1 の実行により、ヘルプの画面が表示される）となります。ご留意ください。）
 
-● ブラウザで github1s.com を指定した際に開く VSCode の画面では、Ctl-x b で発行している
+● ブラウザで vscode.dev を指定した際に開く VSCode の画面では、Ctl-x b で発行している
 C-Tab がブラウザ側でキャッチされ、ブラウザのタブを切り替えてしまいます。
-このため、vscode_target 変数に指定したブラウザで github1s.com を開いて Ctl-x b を実行した
+このため、vscode_target 変数に指定したブラウザで vscode.dev を開いて Ctl-x b を実行した
 場合には、コマンドパレットで View: Quick Open Privious Recently Used Editor in Group を
 実行するようにし、VSCode の機能が働くようにしています。
-C-Tab は 従来どおりブラウザで機能しますので、github1s.com を利用する場合には、C-Tab と
+C-Tab は 従来どおりブラウザで機能しますので、vscode.dev を利用する場合には、C-Tab と
 Ctl-x b を使い分けるようにしてください。
-（この対応により、ブラウザで github1s.com を開いていない場合に Ctl-x b を発行すると、
+（この対応により、ブラウザで vscode.dev を開いていない場合に Ctl-x b を発行すると、
 おかしな動き（F1 の実行により、ヘルプの画面が表示される）となります。ご留意ください。）
+
+● proxy サーバ配下の環境にある PC で Remote-WSL を使った場合、WSL に接続するまでに時間が
+掛かる問題が発生していました。次のページで紹介してある設定を行ったところ改善しましたので、
+紹介しておきます。
+
+- https://github.com/microsoft/vscode-remote-release/issues/4888

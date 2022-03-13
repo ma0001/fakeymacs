@@ -67,17 +67,22 @@ Caps Lock のキーの置き換えは Keyhac ではできませんので、KeySw
 
 - https://sites.google.com/site/craftware/keyhac-ja
 
-起動時に dll load エラーが発生する場合は、「Visual Studio 2015 ランタイムパッケージ」を
-インストールする必要があります。上記のサイトにリンクしてあるものは少し古いバージョンなので、
-次のサイトから新しいものをダウンロードしてインストールしてください。
+起動時に dll load エラーが発生する場合は、「Microsoft Visual C++ 再頒布可能パッケージ」を
+インストールする必要があります。上記のサイトにリンクしてあるものは少し古いバージョンですので、
+次のサイトから最新の「Visual Studio 2015、2017、2019、および2022の Microsoft Visual C++
+再頒布可能パッケージ」をダウンロードし、インストールしてください。
 
-- https://www.microsoft.com/ja-jp/download/details.aspx?id=53840
+- https://docs.microsoft.com/ja-JP/cpp/windows/latest-supported-vc-redist?view=msvc-170
 
-※ Windows OS が x64版 でも、ランタイムパッケージは x86版 をインストールしてください。
+※ Windows OS が x64版 でも、「Microsoft Visual C++ 再頒布可能パッケージ」は x86版 を
+インストールする必要があります。
 
-※ 上記でインストールされるものは C:\Windows\SysWOW64\msvcp140.dll ですので、この dll を
-keyhac.exe と同じフォルダに置けば、ランタイムパッケージをインストールしていない PC でも
-Keyhac を動かすことができるようになります。
+※ dll load エラーが発生しない場合でも、「Microsoft Visual C++ 再頒布可能パッケージ」の
+最新版をインストールすることは意味のあることかもしれません。
+
+※ 上記でインストールされる C:\Windows\SysWOW64\msvcp140.dll を keyhac.exe と同じフォルダに
+置けば、再頒布可能パッケージをインストールしていない PC でも Keyhac を動かすことができる
+ようになります。
 
 *** 3) Keyhac を自動起動するようにする
 
@@ -174,8 +179,8 @@ VSCode については、次の２つの拡張機能により、機能強化を�
 | [[/fakeymacs_extensions/vscode_extensions][vscode_extensions]] | VSCode Extension 用のキーの設定を行う |
 |-------------------+---------------------------------------|
 
-VSCode の Emacs Keymap Extension と比較した本機能の特徴は、以下のページの *<2021/02/23 追記>*
-に記載しています。参考としてください。
+VSCode の Emacs Keymap Extension と比較した本機能の特徴は、次のページの *<2021/02/23 追記>*
+の箇所に記載しています。参考としてください。
 
 - https://w.atwiki.jp/ntemacs/pages/25.html
 
@@ -183,11 +188,12 @@ VSCode の Emacs Keymap Extension と比較した本機能の特徴は、以下�
 
 ● Microsoft Excel や Word などの Office系アプリを使ってコピー＆ペーストをした際、「Ctrl」と表示
 される「貼り付けオプション」ボタンが表示される場合があります。
-これが Emacsキーバインドで利用している Ctrl キーの押下を検知して、想定外の動きをしてしまうようです。
-今のところ本設定での対策は難しいと思っておりますので、以下のページで紹介している「貼り付けオプション」
-ボタンを消す対応で回避してください。
+この「貼り付けオプション」ボタンは、fc.side_of_ctrl_key 変数で指定している側の Ctrl キーではオープン
+しないように対策していますので、fc.side_of_ctrl_key 変数で指定している側でない Ctrl キーを単押しするか、
+マウスを使って操作するようにしてください。また、「貼り付けオプション」ボタンが不要な場合には、
+以下のページに記載に従い、ボタンを表示しない設定としてご利用ください。
 
-- http://ciao.aoten.jp/ciao/2015/03/word-54e8.html
+- https://www.koikikukan.com/archives/2020/02/02-235555.php
 
 ● Keyhac のクリップボードリスト画面で migemo 検索を可能とするためには、辞書ファイルを登録する必要
 があります。次のページに分かりやすく説明がされていますので、参考としてください。
@@ -199,3 +205,14 @@ VSCode の Emacs Keymap Extension と比較した本機能の特徴は、以下�
 ● Logicool のマウス で SetPoint アプリによりキーストロークの割当を行った場合、Keyhac のフックを
 OFF にしてから割当をしないと正常に動作しませんでした。他のキーストロークを設定するソフトの場合
 にも同様の問題が発生する可能性があると思いますので、ご留意ください。
+
+● Windows 11 にしたら、Keyhac のコンソールに「Time stamp inversion happened.」と表示される頻度が
+高くなりました。これは、レジストリ HKEY_CURRENT_USER\Control Panel\Desktop\LowLevelHooksTimeout を
+DWORD 形式で作成し、そこに ms の値（10進数で 3000、5000 などの数値）を設定して再起動することで、
+ある程度の回避ができるようです。ただし、この設定により生ずる影響は分かっていませんので、試す場合は
+各自の責任でお願いします。
+- https://apollo440.hatenablog.com/entries/2010/12/21
+- https://nazochu.blogspot.com/2011/08/windows7.html
+- https://blogs.msdn.microsoft.com/alejacma/2010/10/14/global-hooks-getting-lost-on-windows-7/
+- https://jinblog.at.webry.info/201103/article_9.html
+- https://jinblog.at.webry.info/201103/article_10.html
