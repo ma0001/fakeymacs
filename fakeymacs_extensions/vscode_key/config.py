@@ -42,17 +42,28 @@ try:
 except:
     # 日本語キーボードを利用する際、VSCode で  C-@ をマーク用のキーとして使うかどうかを指定する
     # （True: 使う、False: 使わない）
-    # （VSCode で C-@ を Toggle Integrated Terminal 用のキーとして使えるようにするために設けた設定です。
-    #   True に設定した場合でも、Toggle Integrated Terminal 用のキーとして  C-<半角／全角> が使えます。）
+    # （VSCode で C-@ を Toggle Terminal 用のキーとして使えるようにするために設けた設定です。
+    #   True に設定した場合でも、Toggle Terminal 用のキーとして  C-<半角／全角> が使えます。）
     fc.use_ctrl_atmark_for_mark = False
 
 try:
     # 設定されているか？
     fc.use_direct_input_in_vscode_terminal
 except:
-    # VSCode の Terminal内 で ４つのキー（Ctrl+k、Ctrl+r、Ctrl+s、Ctrl+y）のダイレクト入力機能を使うか
-    # どうかを指定する（True: 使う、False: 使わない）
+    # パネルのターミナル内で４つのキー（C-k、C-r、C-s、C-y）のダイレクト入力機能を使うかどうかを
+    # 指定する（True: 使う、False: 使わない）
     fc.use_direct_input_in_vscode_terminal = False
+
+try:
+    # 設定されているか？
+    fc.terminal_list_for_direct_input
+except:
+    # ターミナルをエディタ領域で使う際、ダイレクト入力機能を使うターミナルの種類を指定する
+    fc.terminal_list_for_direct_input = ["bash",
+                                         "wsl",
+                                         "powershell",
+                                         "zsh"
+                                         ]
 
 try:
     # 設定されているか？
@@ -73,9 +84,9 @@ fakeymacs_vscode.rectangle_mode = False
 fakeymacs_vscode.post_processing = None
 
 def is_vscode_target(window):
-    if (window.getProcessName() in fc.vscode_target and
-        window.getClassName() == "Chrome_WidgetWin_1" and
-        fakeymacs.keybind == "emacs"):
+    if (fakeymacs.keybind == "emacs" and
+        window.getProcessName() in fc.vscode_target and
+        window.getClassName() == "Chrome_WidgetWin_1"):
         return True
     else:
         return False
@@ -107,13 +118,13 @@ def define_key_v2(keys, command):
 def self_insert_command_v(*keys):
     func = self_insert_command(*keys)
     def _func():
-        ime_status = keymap.getWindow().getImeStatus()
+        ime_status = getImeStatus()
         if ime_status:
-            keymap.getWindow().setImeStatus(0)
+            setImeStatus(0)
         func()
         delay()
         if ime_status:
-            keymap.getWindow().setImeStatus(1)
+            setImeStatus(1)
     return _func
 
 def vscodeExecuteCommand(command):
@@ -125,7 +136,7 @@ def vscodeExecuteCommand(command):
 
 def vscodeExecuteCommand2(command):
     def _func():
-        keymap.getWindow().setImeStatus(0)
+        setImeStatus(0)
         vscodeExecuteCommand(command)()
     return _func
 
@@ -155,16 +166,20 @@ def post(func):
             fakeymacs_vscode.post_processing = None
     return _func
 
+def is_terminal_for_direct_input():
+    title = re.sub(r" - .*$",  r"", keymap.getWindow().getText())
+    return title in fc.terminal_list_for_direct_input
+
 ## ファイル操作
 def find_directory():
     # VSCode Command : File: Open Folder...
-    self_insert_command("C-k", "C-o")()
-    # vscodeExecuteCommand("workbench.action.files.openFolder")()
+    # self_insert_command("C-k", "C-o")() # ターミナルで誤動作するのでショートカットキーは使わない
+    vscodeExecuteCommand("workbench.action.files.openFolder")()
 
 def recentf():
     # VSCode Command : File: Open Recent...
-    self_insert_command("C-r")()
-    # vscodeExecuteCommand("workbench.action.openRecent")()
+    # self_insert_command("C-r")() # ターミナルで誤動作するのでショートカットキーは使わない
+    vscodeExecuteCommand("workbench.action.openRecent")()
 
 def locate():
     # VSCode Command : Go to File...
@@ -184,16 +199,20 @@ def next_error():
 
 ## カット / コピー
 def kill_line_v(repeat=1):
-    if (fc.use_direct_input_in_vscode_terminal and
-        fakeymacs_vscode.vscode_focus == "terminal"):
-        self_insert_command("C-k")()
+    if checkWindow("code.exe"):
+        if fakeymacs_vscode.vscode_focus == "not_terminal" and not is_terminal_for_direct_input():
+            kill_line(repeat)
+        else:
+            self_insert_command("C-k")()
     else:
         kill_line(repeat)
 
 def yank_v():
-    if (fc.use_direct_input_in_vscode_terminal and
-        fakeymacs_vscode.vscode_focus == "terminal"):
-        self_insert_command("C-y")()
+    if checkWindow("code.exe"):
+        if fakeymacs_vscode.vscode_focus == "not_terminal" and not is_terminal_for_direct_input():
+            yank()
+        else:
+            self_insert_command("C-y")()
     else:
         yank()
 
@@ -215,9 +234,11 @@ def list_buffers():
 
 ## 文字列検索
 def isearch_v(direction):
-    if (fc.use_direct_input_in_vscode_terminal and
-        fakeymacs_vscode.vscode_focus == "terminal"):
-        self_insert_command({"backward":"C-r", "forward":"C-s"}[direction])()
+    if checkWindow("code.exe"):
+        if fakeymacs_vscode.vscode_focus == "not_terminal" and not is_terminal_for_direct_input():
+            isearch(direction)
+        else:
+            self_insert_command({"backward":"C-r", "forward":"C-s"}[direction])()
     else:
         isearch(direction)
 
@@ -227,33 +248,71 @@ def isearch_backward():
 def isearch_forward():
     isearch_v("forward")
 
+## パネル操作
+def focus_into_panel():
+    # VSCode Command : View: Focus into Panel
+    vscodeExecuteCommand("VFiP")()
+    # vscodeExecuteCommand("workbench.action.focusPanel")()
+
+def close_panel():
+    # VSCode Command : View: Close Panel
+    vscodeExecuteCommand("VCPa")()
+    # vscodeExecuteCommand("workbench.action.closePanel")()
+
+def toggle_maximized_panel():
+    # VSCode Command : View: Toggle Maximized Panel
+    vscodeExecuteCommand("VTMP")()
+    # vscodeExecuteCommand("workbench.action.toggleMaximizedPanel")()
+
 ## エディタ操作
-def delete_group():
-    # VSCode Command : View: Close All Editors in Group
-    vscodeExecuteCommand("VCAEi")()
-    # vscodeExecuteCommand("workbench.action.closeEditorsInGroup")()
+def delete_window():
+    if fakeymacs_vscode.vscode_focus == "not_terminal":
+        # VSCode Command : View: Close All Editors in Group
+        vscodeExecuteCommand("VCAEi")()
+        # vscodeExecuteCommand("workbench.action.closeEditorsInGroup")()
+    else:
+        focus_into_panel()
+        close_panel()
+        fakeymacs_vscode.vscode_focus = "not_terminal"
 
-def delete_other_groups():
-    # VSCode Command : View: Close Editors in Other Groups
-    vscodeExecuteCommand("VCEiO")()
-    # vscodeExecuteCommand("workbench.action.closeEditorsInOtherGroups")()
+def delete_other_windows():
+    if fakeymacs_vscode.vscode_focus == "not_terminal":
+        # VSCode Command : View: Close Editors in Other Groups
+        vscodeExecuteCommand("VCEiO")()
+        # vscodeExecuteCommand("workbench.action.closeEditorsInOtherGroups")()
 
-def split_editor_below():
-    # VSCode Command : View: Split Editor Orthogonal
-    self_insert_command("C-k", "C-Yen")()
-    # vscodeExecuteCommand("workbench.action.splitEditorOrthogonal")()
+        if fc.use_direct_input_in_vscode_terminal:
+            focus_into_panel()
+            close_panel()
+    else:
+        toggle_maximized_panel()
 
-def split_editor_right():
-    # VSCode Command : View: Split Editor
-    self_insert_command("C-Yen")()
-    # vscodeExecuteCommand("workbench.action.splitEditor")()
+def split_window_below():
+    if fakeymacs_vscode.vscode_focus == "not_terminal":
+        # VSCode Command : View: Split Editor Orthogonal
+        vscodeExecuteCommand("VSEOr")()
+        # self_insert_command("C-k", "C-Yen")() # ターミナルで誤動作するのでショートカットキーは使わない
+        # vscodeExecuteCommand("workbench.action.splitEditorOrthogonal")()
+    else:
+        toggle_maximized_panel()
+
+def split_window_right():
+    if fakeymacs_vscode.vscode_focus == "not_terminal" and not is_terminal_for_direct_input():
+        # VSCode Command : View: Split Editor
+        self_insert_command("C-Yen")()
+        # vscodeExecuteCommand("workbench.action.splitEditor")()
+    else:
+        # VSCode Command : View: Split Terminal
+        # self_insert_command("C-S-5")()
+        vscodeExecuteCommand("workbench.action.terminal.split")()
 
 def rotate_layout():
-    # VSCode Command : Toggle Vertical/Horizontal Editor Layout
-    self_insert_command("A-S-0")()
-    # vscodeExecuteCommand("workbench.action.toggleEditorGroupLayout")()
+    if fakeymacs_vscode.vscode_focus == "not_terminal" and not is_terminal_for_direct_input():
+        # VSCode Command : Toggle Vertical/Horizontal Editor Layout
+        self_insert_command("A-S-0")()
+        # vscodeExecuteCommand("workbench.action.toggleEditorGroupLayout")()
 
-def other_group():
+def other_window():
     # VSCode Command : View: Navigate Between Editor Groups
     vscodeExecuteCommand("VNBEdG")()
     # vscodeExecuteCommand("workbench.action.navigateEditorGroups")()
@@ -332,7 +391,8 @@ def skip_to_previous_like_this():
 
 def skip_to_next_like_this():
     # VSCode Command : Move Last Selection To Next Find Match
-    region(self_insert_command("C-k", "C-d"))()
+    region(vscodeExecuteCommand("MLSTN"))()
+    # region(self_insert_command("C-k", "C-d"))() # ターミナルで誤動作するのでショートカットキーは使わない
     # region(vscodeExecuteCommand("editor.action.moveSelectionToNextFindMatch"))()
 
 def expand_region():
@@ -360,7 +420,7 @@ def keyboard_quit_v1():
 
 ## ターミナル操作
 def create_terminal():
-    # VSCode Command : Terminal: Create New Integrated Terminal
+    # VSCode Command : Terminal: Create New Terminal
     vscodeExecuteCommand2("workbench.action.terminal.new")()
 
     if fc.use_direct_input_in_vscode_terminal:
@@ -374,13 +434,19 @@ def toggle_terminal():
 
             fakeymacs_vscode.vscode_focus = "terminal"
         else:
-            # VSCode Command : View: Close Panel
-            vscodeExecuteCommand2("workbench.action.closePanel")()
-
+            focus_into_panel()
+            close_panel()
             fakeymacs_vscode.vscode_focus = "not_terminal"
     else:
         # VSCode Command : View: Toggle Terminal
         vscodeExecuteCommand2("workbench.action.terminal.toggleTerminal")()
+
+def create_terminal_in_editor_area():
+    # VSCode Command : Terminal: Create New Terminal in Editor Area
+    vscodeExecuteCommand2("workbench.action.createTerminalEditor")()
+
+    if fc.use_direct_input_in_vscode_terminal:
+        fakeymacs_vscode.vscode_focus = "not_terminal"
 
 ## その他
 def keyboard_quit_v2():
@@ -456,8 +522,8 @@ if is_japanese_keyboard:
 else:
     define_key_v("Ctl-x BackQuote", reset_search(reset_undo(reset_counter(reset_mark(next_error)))))
 
-define_key_v("A-p", self_insert_command("C-Up"))
-define_key_v("A-n", self_insert_command("C-Down"))
+# define_key_v("A-p", self_insert_command("C-Up"))
+# define_key_v("A-n", self_insert_command("C-Down"))
 
 ## 「カット / コピー」のキー設定
 define_key_v("C-k", reset_search(reset_undo(reset_counter(reset_mark(repeat3(kill_line_v))))))
@@ -473,12 +539,12 @@ define_key_v("C-r", reset_undo(reset_counter(reset_mark(isearch_backward))))
 define_key_v("C-s", reset_undo(reset_counter(reset_mark(isearch_forward))))
 
 ## 「エディタ操作」のキー設定
-define_key_v("Ctl-x 0", reset_search(reset_undo(reset_counter(reset_mark(delete_group)))))
-define_key_v("Ctl-x 1", reset_search(reset_undo(reset_counter(reset_mark(delete_other_groups)))))
-define_key_v("Ctl-x 2", split_editor_below)
-define_key_v("Ctl-x 3", split_editor_right)
+define_key_v("Ctl-x 0", reset_search(reset_undo(reset_counter(reset_mark(delete_window)))))
+define_key_v("Ctl-x 1", reset_search(reset_undo(reset_counter(reset_mark(delete_other_windows)))))
+define_key_v("Ctl-x 2", split_window_below)
+define_key_v("Ctl-x 3", split_window_right)
 define_key_v("Ctl-x 4", rotate_layout)
-define_key_v("Ctl-x o", reset_search(reset_undo(reset_counter(reset_mark(other_group)))))
+define_key_v("Ctl-x o", reset_search(reset_undo(reset_counter(reset_mark(other_window)))))
 
 if fc.use_ctrl_digit_key_for_digit_argument:
     key = "C-A-{}"
@@ -512,14 +578,18 @@ define_key_v("C-S-(243)", reset_search(reset_undo(reset_counter(reset_mark(creat
 define_key_v("C-S-(244)", reset_search(reset_undo(reset_counter(reset_mark(create_terminal)))))
 define_key_v("C-(243)",   reset_search(reset_undo(reset_counter(reset_mark(toggle_terminal)))))
 define_key_v("C-(244)",   reset_search(reset_undo(reset_counter(reset_mark(toggle_terminal)))))
+define_key_v("C-A-(243)", reset_search(reset_undo(reset_counter(reset_mark(create_terminal_in_editor_area)))))
+define_key_v("C-A-(244)", reset_search(reset_undo(reset_counter(reset_mark(create_terminal_in_editor_area)))))
 
 if is_japanese_keyboard:
     define_key_v("C-S-Atmark", reset_search(reset_undo(reset_counter(reset_mark(create_terminal)))))
     if not fc.use_ctrl_atmark_for_mark:
         define_key_v("C-Atmark", reset_search(reset_undo(reset_counter(reset_mark(toggle_terminal)))))
+    define_key_v("C-A-Atmark", reset_search(reset_undo(reset_counter(reset_mark(create_terminal_in_editor_area)))))
 else:
     define_key_v("C-S-BackQuote", reset_search(reset_undo(reset_counter(reset_mark(create_terminal)))))
     define_key_v("C-BackQuote",   reset_search(reset_undo(reset_counter(reset_mark(toggle_terminal)))))
+    define_key_v("C-A-BackQuote", reset_search(reset_undo(reset_counter(reset_mark(create_terminal_in_editor_area)))))
 
 ## 「その他」のキー設定
 define_key_v("Enter",       post(reset_undo(reset_counter(reset_mark(repeat(newline))))))

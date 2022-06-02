@@ -14,7 +14,8 @@ VSCode 用のキーの設定を行う拡張機能です。
 | vscode_target                       | VSCode 用のキーバインドを利用するアプリケーションソフトを指定する                                     |
 | vscode_prefix_key                   | 置き換えするプレフィックスキーの組み合わせ（VSCode のキー、Fakeymacs のキー）を指定する（複数指定可） |
 | use_ctrl_atmark_for_mark            | 日本語キーボードを利用する際、VSCode で  C-@ をマーク用のキーとして使うかどうかを指定する             |
-| use_direct_input_in_vscode_terminal | VSCode の Terminal内 で ４つのキー（C-k、C-r、C-s、C-y）のダイレクト入力機能を使うかどうかを指定する  |
+| use_direct_input_in_vscode_terminal | パネルのターミナル内で４つのキー（C-k、C-r、C-s、C-y）のダイレクト入力機能を使うかどうかを指定する    |
+| terminal_list_for_direct_input      | ターミナルをエディタ領域で使う際、ダイレクト入力機能を使うターミナルの種類を指定する                  |
 | esc_mode_in_keyboard_quit           | keyboard_quit 関数コール時の Esc キーの発行方法を指定する                                             |
 |-------------------------------------+-------------------------------------------------------------------------------------------------------|
 
@@ -33,6 +34,11 @@ True に設定した場合でも Toggle Terminal 用のキーとして C-<半角
 ※ use_direct_input_in_vscode_terminal 変数は初期値を False（使わない）としており、
 仕様を理解した方のみ使う機能としています。use_direct_input_in_vscode_terminal 変数を True に
 した際の仕様については、以降の説明を参照してください。
+
+※ use_direct_input_in_vscode_terminal 変数が False の場合でも、terminal_list_for_direct_input
+変数に設定しているターミナルをエディタ領域で開いた場合には、４つのキー（C-k、C-r、C-s、C-y）の
+ダイレクト入力が機能します。パネルのターミナルでダイレクト入力機能を利用する場合と異なり、
+現在の場所を認識する必要がなくなるため、シンプルな利用形態になると思います。
 
 ※ esc_mode_in_keyboard_quit 変数の設定値には、次のいずれかの値を指定できます。
 - 1：Esc キーを常に発行する
@@ -80,9 +86,6 @@ True に設定した場合でも Toggle Terminal 用のキーとして C-<半角
 | M-g M-n | next_error                    | Go to Next Problem in Files (Error, Warning, Info)     |                        |
 | Ctl-x ` | next_error                    | Go to Next Problem in Files (Error, Warning, Info)     |                        |
 |---------+-------------------------------+--------------------------------------------------------+------------------------|
-| A-p     | self_insert_command("C-Up")   | -                                                      | キーバインドの置き換え |
-| A-n     | self_insert_command("C-Down") | -                                                      | キーバインドの置き換え |
-|---------+-------------------------------+--------------------------------------------------------+------------------------|
 
 **** ● 「バッファ / ウィンドウ操作」のキー設定
 
@@ -99,12 +102,12 @@ True に設定した場合でも Toggle Terminal 用のキーとして C-<半角
 |----------------+------------------------------+-------------------------------------------+-------------|
 | Keybind        | Function                     | VSCode Command                            | Description |
 |----------------+------------------------------+-------------------------------------------+-------------|
-| Ctl-x 0        | delete_group                 | View: Close All Editors in Group          |             |
-| Ctl-x 1        | delete_other_groups          | View: Close Editors in Other Groups       |             |
-| Ctl-x 2        | split_editor_below           | View: Split Editor Orthogonal             |             |
-| Ctl-x 3        | split_editor_right           | View: Split Editor                        |             |
+| Ctl-x 0        | delete_window                | View: Close All Editors in Group          |             |
+| Ctl-x 1        | delete_other_windows         | View: Close Editors in Other Groups       |             |
+| Ctl-x 2        | split_window_below           | View: Split Editor Orthogonal             |             |
+| Ctl-x 3        | split_window_right           | View: Split Editor                        |             |
 | Ctl-x 4        | rotate_layout                | Toggle Vertical/Horizontal Editor Layout  |             |
-| Ctl-x o        | other_group                  | View: Navigate Between Editor Groups      |             |
+| Ctl-x o        | other_window                 | View: Navigate Between Editor Groups      |             |
 | C-<数字キー>   | switch_focus(<数字キーの値>) | View: Focus Side Bar or n-th Editor Group |             |
 | C-A-<数字キー> | switch_focus(<数字キーの値>) | View: Focus Side Bar or n-th Editor Group |             |
 |----------------+------------------------------+-------------------------------------------+-------------|
@@ -158,23 +161,23 @@ keyboard_quit（C-A-g）を利用してください。（esc_mode_in_keyboard_qu
 
 - https://github.com/smzht/fakeymacs/tree/master/fakeymacs_extensions/vscode_extensions
 
-****  ●「ターミナル操作」のキー設定
+****  ●「ターミナル操作」のキー設定（パネル内ターミナル）
+
+|-------------+-----------------+------------------------------------------+--------------------|
+| Keybind     | Function        | VSCode Command                           | Description        |
+|-------------+-----------------+------------------------------------------+--------------------|
+| C-~ (C-S-`) | create_terminal | Terminal: Create New Terminal            | US Keyboard の場合 |
+| C-`         | toggle_terminal | View: Toggle Terminal                    | US Keyboard の場合 |
+|-------------+-----------------+------------------------------------------+--------------------|
+
 
 |-----------------+-----------------+------------------------------------------+---------------------|
 | Keybind         | Function        | VSCode Command                           | Description         |
 |-----------------+-----------------+------------------------------------------+---------------------|
-| C-~ (C-S-`)     | create_terminal | View: Toggle Terminal -like              | US Keyboard の場合  |
-| C-`             | toggle_terminal | Terminal: Create New Integrated Terminal | US Keyboard の場合  |
-|-----------------+-----------------+------------------------------------------+---------------------|
-
-
-|-----------------+-----------------+------------------------------------------+---------------------|
-| Keybind         | Function        | VSCode Command                           | Description         |
-|-----------------+-----------------+------------------------------------------+---------------------|
-| C-` (C-S-@)     | create_terminal | View: Toggle Terminal -like              | JIS Keyboard の場合 |
-| C-@             | toggle_terminal | Terminal: Create New Integrated Terminal | JIS Keyboard の場合 |
-| C-S-<半角/全角> | create_terminal | View: Toggle Terminal -like              | JIS Keyboard の場合 |
-| C-<半角/全角>   | toggle_terminal | Terminal: Create New Integrated Terminal | JIS Keyboard の場合 |
+| C-` (C-S-@)     | create_terminal | Terminal: Create New Terminal            | JIS Keyboard の場合 |
+| C-@             | toggle_terminal | View: Toggle Terminal                    | JIS Keyboard の場合 |
+| C-S-<半角/全角> | create_terminal | Terminal: Create New Terminal            | JIS Keyboard の場合 |
+| C-<半角/全角>   | toggle_terminal | View: Toggle Terminal                    | JIS Keyboard の場合 |
 |-----------------+-----------------+------------------------------------------+---------------------|
 
 ※ C-@ は、use_ctrl_atmark_for_mark 変数が False の場合に機能します。
@@ -189,28 +192,49 @@ use_direct_input_in_vscode_terminal 変数が False（初期値）の場合で�
 
 - https://code.visualstudio.com/docs/editor/integrated-terminal#_chord-keybindings-in-the-terminal
 
-※ ターミナルで C-s を利用できるようにするには、bash で stty stop undef の設定をする必要があります。
-この設定をしないでこのキーを押下すると stop から戻れなくなりますのでご注意ください。
+※ bash のターミナルで C-s を利用できるようにするには、bash で stty stop undef の設定をする必要が
+あります。この設定をしないでこのキーを押下すると stop から戻れなくなりますのでご注意ください。
 
-※ use_direct_input_in_vscode_terminal 変数を True にしている場合に Terminal から抜ける場合は、
+※ PowerShell のターミナルで emacs キーバインドを使うためには、次のページを参照してください。
+
+- https://note.com/kokoronopython/n/nbf09b3b5db46
+
+※ use_direct_input_in_vscode_terminal 変数を True にしている場合にターミナルから抜ける場合は、
 次のキーを利用するようにしてください。先に説明した４つのキーが VSCode のショートカットキーとして
 認識されるように戻ります。
 
-|----------------+------------------------------+------------------------------------------+---------------------|
-| Keybind        | Function                     | VSCode Command                           | Description         |
-|----------------+------------------------------+------------------------------------------+---------------------|
-| C-`            | toggle_terminal              | Terminal: Create New Integrated Terminal | US Keyboard の場合  |
-| C-@            | toggle_terminal              | Terminal: Create New Integrated Terminal | JIS Keyboard の場合 |
-| C-<半角/全角>  | toggle_terminal              | Terminal: Create New Integrated Terminal | JIS Keyboard の場合 |
-|----------------+------------------------------+------------------------------------------+---------------------|
-| Ctl-x o        | other_group                  | Navigate Between Editor Groups           |                     |
-| C-<数字キー>   | switch_focus(<数字キーの値>) | Focus Side Bar or n-th Editor Group      |                     |
-| C-A-<数字キー> | switch_focus(<数字キーの値>) | Focus Side Bar or n-th Editor Group      |                     |
-|----------------+------------------------------+------------------------------------------+---------------------|
+|----------------+------------------------------+-------------------------------------+---------------------|
+| Keybind        | Function                     | VSCode Command                      | Description         |
+|----------------+------------------------------+-------------------------------------+---------------------|
+| C-`            | toggle_terminal              | View: Toggle Terminal               | US Keyboard の場合  |
+| C-@            | toggle_terminal              | View: Toggle Terminal               | JIS Keyboard の場合 |
+| C-<半角/全角>  | toggle_terminal              | View: Toggle Terminal               | JIS Keyboard の場合 |
+|----------------+------------------------------+-------------------------------------+---------------------|
+| Ctl-x o        | other_window                 | Navigate Between Editor Groups      |                     |
+| C-<数字キー>   | switch_focus(<数字キーの値>) | Focus Side Bar or n-th Editor Group |                     |
+| C-A-<数字キー> | switch_focus(<数字キーの値>) | Focus Side Bar or n-th Editor Group |                     |
+|----------------+------------------------------+-------------------------------------+---------------------|
 
-※ マウスのクリックでカーソル位置の変更を行うと、この状態の認識に齟齬が発生することがあります。
-その場合は、上記のいずれかのキーを押下することにより、Fakeymacs に現在の状態を再認識させるように
-してください。
+※ マウスのクリックでカーソル位置の変更したり、ターミナルのシェルを終了してパネルをクロースした際などに、
+現在の場所の認識に齟齬が発生することがあります。その場合は、上記のいずれかのキーを押下することにより、
+Fakeymacs に現在の場所を再認識させるようにしてください。
+
+****  ●「ターミナル操作」のキー設定（エディタ領域ターミナル）
+
+|-----------------+--------------------------------+----------------------------------------------+---------------------|
+| Keybind         | Function                       | VSCode Command                               | Description         |
+|-----------------+--------------------------------+----------------------------------------------+---------------------|
+| C-A-`           | create_terminal_in_editor_area | Terminal: Create New Terminal in Editor Area | US Keyboard の場合  |
+| C-A-@           | create_terminal_in_editor_area | Terminal: Create New Terminal in Editor Area | JIS Keyboard の場合 |
+| C-A-<半角/全角> | create_terminal_in_editor_area | Terminal: Create New Terminal in Editor Area | JIS Keyboard の場合 |
+|-----------------+--------------------------------+----------------------------------------------+---------------------|
+
+※ エディタ領域にターミナルを開く場合には、上記のキーを利用してください。
+
+※ エディタ領域に表示するターミナルでは、ウィンドウのタイトルからターミナルが選択されていることを
+判別できます。このため、terminal_list_for_direct_input 変数に設定しているターミナルについては、
+use_direct_input_in_vscode_terminal 変数の設定に関わらず、４つのキー（C-k、C-r、C-s、C-y）の
+ダイレクト入力が行われるようにしています。
 
 **** ● 「その他」のキー設定
 

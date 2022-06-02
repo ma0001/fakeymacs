@@ -27,8 +27,8 @@ keymap.setFont("ＭＳ ゴシック", 12)
 # [section-options] --------------------------------------------------------------------------------
 
 # IMEの設定（次の設定のいずれかを有効にする）
-fc.ime = "old_Microsoft_IME"
-# fc.ime = "new_Microsoft_IME"
+# fc.ime = "old_Microsoft_IME"
+fc.ime = "new_Microsoft_IME"
 # fc.ime = "Google_IME"
 # fc.ime = None
 
@@ -70,11 +70,12 @@ fc.emacs_exclusion_key  = {"chrome.exe"       : ["C-l", "C-t"],
                            }
 
 # 左右どちらの Ctrlキーを使うかを指定する（"L": 左、"R": 右）
+fc.side_of_ctrl_key = "L"
 # fc.side_of_ctrl_key = "R"
 
 # Escキーを Metaキーとして使うかどうかを指定する（True: 使う、False: 使わない）
 # （True（Metaキーとして使う）に設定されている場合、ESC の二回押下で ESC が入力されます）
-# fc.use_esc_as_meta = True
+fc.use_esc_as_meta = False
 
 # Emacs日本語入力モードを使うかどうかを指定する（True: 使う、False: 使わない）
 fc.use_emacs_ime_mode = True
@@ -85,6 +86,18 @@ fc.emacs_ime_mode_balloon_message = "▲"
 
 # IME の状態を表示するバルーンメッセージを表示するかどうかを指定する（True: 表示する、False: 表示しない）
 fc.use_ime_status_balloon = True
+
+# IME の状態をテキスト カーソル インジケーターの色で表現するかどうかを指定する
+# （True: 表現する、False: 表現しない）
+# （テキスト カーソル インジケーターを利用するには、次のページを参考とし設定を行ってください
+#   https://faq.nec-lavie.jp/qasearch/1007/app/servlet/relatedqa?QID=022081）
+fc.use_ime_status_cursor_color = False
+
+# IME が ON のときのテキスト カーソル インジケーターの色を指定する
+fc.ime_on_cursor_color = 0x00C800 # 濃い緑
+
+# IME が OFF のときのテキスト カーソル インジケーターの色を指定する
+fc.ime_off_cursor_color = 0x0000FF # 赤
 
 # IME をトグルで切り替えるキーを指定する（複数指定可）
 fc.toggle_input_method_key = []
@@ -121,12 +134,26 @@ fc.set_input_method_key += [["(26)", "(22)"]]
 
 # アプリケーションキーとして利用するキーを指定する
 # （修飾キーに Alt は使えないようです）
+fc.application_key = None
 # fc.application_key = "O-RCtrl"
 # fc.application_key = "W-m"
 
 # 数引数の指定に Ctrl+数字キーを使うかを指定する（True: 使う、False: 使わない）
 # （False に指定しても、C-u 数字キーで数引数を指定することができます）
-# fc.use_ctrl_digit_key_for_digit_argument = True
+fc.use_ctrl_digit_key_for_digit_argument = False
+
+# アクティブウィンドウを切り替えるキーの組み合わせ（前、後 の順）を指定する（複数指定可）
+# （A-Esc キーの動作とは異なり、仮想デスクトップを跨ぎ、最小化されていないウィンドウを順に切り替え
+#   ます。初期設定は ["A-p", "A-n"] としていますが、Emacs の shell-mode のキーバインドなどと設定が
+#   被る場合には、["A-S-p", "A-S-n"] などの異なる設定とするか、Emacs 側に次の設定を入れて、Emacs 側
+#   のキーの設定を置き換えてご利用ください。
+#     (define-key key-translation-map (kbd "M-S-p") (kbd "M-p"))
+#     (define-key key-translation-map (kbd "M-S-n") (kbd "M-n"))
+#  ）
+fc.window_switching_key = []
+fc.window_switching_key += [["A-p", "A-n"]]
+# fc.window_switching_key += [["A-S-p", "A-S-n"]]
+# fc.window_switching_key += [["A-Up", "A-Down"]]
 
 # [section-base-2] ---------------------------------------------------------------------------------
 
@@ -217,13 +244,15 @@ fc.lancherList_listers = [
 # VSCode 用のキーの設定を行う
 if 1:
     fc.vscode_target  = ["Code.exe"]
-    # vscode.dev 等、ブラウザで動作する VSCode で本機能を無効とするには、次の４行をコメントアウト
+
+    # vscode.dev 等、ブラウザで動作する VSCode で本機能を有効とするには、次の４行のコメントを解除
     # してください
-    fc.vscode_target += ["chrome.exe",
-                         "msedge.exe",
-                         "firefox.exe",
-                         ]
-    # fc.vscode_prefix_key = [["C-;", "C-A-;"]]
+    # fc.vscode_target += ["chrome.exe",
+    #                      "msedge.exe",
+    #                      "firefox.exe",
+    #                      ]
+
+    # fc.vscode_prefix_key = [["C-Semicolon", "C-A-Semicolon"]]
     fc.use_ctrl_atmark_for_mark = False
     fc.use_direct_input_in_vscode_terminal = False
     fc.esc_mode_in_keyboard_quit = 1
@@ -236,6 +265,7 @@ if 1:
     fc.vscode_input_sequence = True
     fc.vscode_insert_numbers = True
     fc.vscode_keyboard_macro = False
+    fc.vscode_filter_text = False
 
     exec(readConfigExtension(r"vscode_key\config.py"), dict(globals(), **locals()))
     # vscode_extensions\config.py は、vscode_key\config.py 内部から呼ばれている

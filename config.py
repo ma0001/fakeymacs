@@ -5,7 +5,7 @@
 ## Windows の操作を Emacs のキーバインドで行うための設定（Keyhac版）
 ##
 
-fakeymacs_version = "20220311_02"
+fakeymacs_version = "20220601_01"
 
 # このスクリプトは、Keyhac for Windows ver 1.82 以降で動作します。
 #   https://sites.google.com/site/craftware/keyhac-ja
@@ -63,6 +63,8 @@ fakeymacs_version = "20220311_02"
 #   表示するかどうかを指定できる。
 # ・ime_status_balloon_message 変数の設定により、IME の状態を表示するバルーンメッセージ
 #   の組み合わせ（英数入力、日本語入力）を指定できる。
+# ・use_ime_status_cursor_color 変数の設定により、IME の状態をテキスト カーソル インジ
+#   ケーターの色で表現するかどうかを指定する
 #
 # ＜Emacsキーバインド設定を有効にしたアプリケーションソフトでの動き＞
 # ・use_ctrl_i_as_tab 変数の設定により、C-iキーを Tabキーとして使うかどうかを指定できる。
@@ -115,7 +117,8 @@ fakeymacs_version = "20220311_02"
 #     ・http://www.jw7.org/2015/11/03/windows10_virtualdesktop_animation_off/ ）
 # ・window_movement_key_for_desktops 変数に設定したキーにより、アクティブウィンドウの
 #   仮想デスクトップ間の移動が行われる。
-#   （本機能を利用する場合は、Microsoft Store から SylphyHorn をインストールしてください。）
+#   （本機能を利用する場合は、次のページから SylphyHornPlus をインストールしてください。
+#     ・https://github.com/hwtnb/SylphyHornPlusWin11/releases）
 # ・word_register_key 変数に設定したキーにより、IME の「単語登録」プログラムの起動が
 #   行われる。
 # ・clipboardList_key 変数に設定したキーにより、クリップボードリストが起動する。
@@ -137,6 +140,7 @@ import copy
 import datetime
 import ctypes
 import pyauto
+import winreg
 
 import keyhac_keymap
 from keyhac import *
@@ -170,6 +174,63 @@ def configure(keymap):
     else:
         is_japanese_keyboard = False
 
+    # ウィンドウフォーカスが変わった時、すぐに Keyhac に検知させるための設定を行う
+    # （IME の状態をテキスト カーソル インジケーターの色で表現するためにこの機能を追加した）
+    # （https://sites.google.com/site/agkh6mze/howto/winevent）
+    # （https://github.com/Danesprite/windows-fun/blob/master/window%20change%20listener.py）
+    if 1:
+        EVENT_SYSTEM_DIALOGSTART = 0x0010
+        WINEVENT_OUTOFCONTEXT    = 0x0000
+        EVENT_SYSTEM_FOREGROUND  = 0x0003
+        WINEVENT_SKIPOWNPROCESS  = 0x0002
+
+        user32 = ctypes.windll.user32
+        ole32 = ctypes.windll.ole32
+
+        try:
+            # 設定されているか？
+            keymap.fakeymacs_hook
+
+            # reload 時の対策
+            user32.UnhookWinEvent(keymap.fakeymacs_hook)
+            ole32.CoUninitialize()
+        except:
+            pass
+
+        ole32.CoInitialize(None)
+
+        WinEventProcType = ctypes.WINFUNCTYPE(
+            None,
+            ctypes.wintypes.HANDLE,
+            ctypes.wintypes.DWORD,
+            ctypes.wintypes.HWND,
+            ctypes.wintypes.LONG,
+            ctypes.wintypes.LONG,
+            ctypes.wintypes.DWORD,
+            ctypes.wintypes.DWORD
+        )
+
+        def callback(hWinEventHook, event, hwnd, idObject, idChild, dwEventThread, dwmsEventTime):
+            if keymap.hook_enabled:
+                delay(0.1)
+                keymap._updateFocusWindow()
+            else:
+                setCursorColor(False)
+
+        WinEventProc = WinEventProcType(callback)
+
+        user32.SetWinEventHook.restype = ctypes.wintypes.HANDLE
+        keymap.fakeymacs_hook = user32.SetWinEventHook(
+            EVENT_SYSTEM_FOREGROUND,
+            EVENT_SYSTEM_FOREGROUND,
+            0,
+            WinEventProc,
+            0,
+            0,
+            WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS
+        )
+
+    # 個人設定ファイルを読み込む
     try:
         with open(dataPath() + r"\config_personal.py", "r", encoding="utf-8-sig") as f:
             config_personal = f.read()
@@ -216,15 +277,15 @@ def configure(keymap):
     ####################################################################################################
 
     # IMEの設定（次の設定のいずれかを有効にする）
-    fc.ime = "old_Microsoft_IME"
-    # fc.ime = "new_Microsoft_IME"
+    # fc.ime = "old_Microsoft_IME"
+    fc.ime = "new_Microsoft_IME"
     # fc.ime = "Google_IME"
     # fc.ime = None
 
     # Chromium 系ブラウザで発生する問題の対策を行うかどうかを指定する（True: 対策する、False: 対策しない）
     # （Chromium 系ブラウザのバージョン 92 では、アドレスバーにカーソルを移動した際、強制的に ASCII入力
-    #   モードに移行する不具合が発生します。（バージョン 93 で対策済みですが、過去にも度々発生しています）
-    #   （https://did2memo.net/2021/07/22/chrome-japanese-ime-off-issue-chrome-92/）
+    #   モードに移行する不具合が発生します。（バージョン 93 で対策済みですが、過去にも度々発生しています。）
+    #   ・https://did2memo.net/2021/07/22/chrome-japanese-ime-off-issue-chrome-92/
     #   さらに Google日本語入力を利用している場合、keymap.getWindow().getImeStatus() が True を返すため、
     #   Emacs日本語入力モードの挙動がおかしくなります。この対策を行うかどうかを指定します。）
     fc.correct_ime_status = False
@@ -388,6 +449,18 @@ def configure(keymap):
     # IME の状態を表示するバルーンメッセージの組み合わせ（英数入力、日本語入力）を指定する
     fc.ime_status_balloon_message = ["[A]", "[あ]"]
 
+    # IME の状態をテキスト カーソル インジケーターの色で表現するかどうかを指定する
+    # （True: 表現する、False: 表現しない）
+    # （テキスト カーソル インジケーターを利用するには、次のページを参考とし設定を行ってください
+    #   https://faq.nec-lavie.jp/qasearch/1007/app/servlet/relatedqa?QID=022081）
+    fc.use_ime_status_cursor_color = False
+
+    # IME が ON のときのテキスト カーソル インジケーターの色を指定する
+    fc.ime_on_cursor_color = 0x00C800 # 濃い緑
+
+    # IME が OFF のときのテキスト カーソル インジケーターの色を指定する
+    fc.ime_off_cursor_color = 0x0000FF # 赤
+
     # IME をトグルで切り替えるキーを指定する（複数指定可）
     fc.toggle_input_method_key = []
     fc.toggle_input_method_key += ["C-Yen"]
@@ -538,18 +611,23 @@ def configure(keymap):
     fc.other_window_key = "A-o"
 
     # アクティブウィンドウを切り替えるキーの組み合わせ（前、後 の順）を指定する（複数指定可）
-    # （内部で A-Tab による切り替えを行っているため、設定するキーは Altキーとの組み合わせとしてください）
-    # （切り替え画面が起動した後は、A-b、A-f、A-p、A-n でウィンドウを切り替えられるように設定している他、
-    #   Alt + 矢印キーでもウィンドウを切り替えることができます。また、A-g もしくは A-Esc で切り替え画面の
-    #   終了（キャンセル）となり、Altキーを離すか A-Enter で切り替えるウィンドウの確定となります。）
-    # （デフォルトキーは、["A-S-Tab", "A-Tab"]）
+    # （A-Esc キーの動作とは異なり、仮想デスクトップを跨ぎ、最小化されていないウィンドウを順に切り替え
+    #   ます。初期設定は ["A-p", "A-n"] としていますが、Emacs の shell-mode のキーバインドなどと設定が
+    #   被る場合には、["A-S-p", "A-S-n"] などの異なる設定とするか、Emacs 側に次の設定を入れて、Emacs 側
+    #   のキーの設定を置き換えてご利用ください。
+    #     (define-key key-translation-map (kbd "M-S-p") (kbd "M-p"))
+    #     (define-key key-translation-map (kbd "M-S-n") (kbd "M-n"))
+    #  ）
     fc.window_switching_key = []
-    # fc.window_switching_key += [["A-p", "A-n"]]
+    fc.window_switching_key += [["A-p", "A-n"]]
+    # fc.window_switching_key += [["A-S-p", "A-S-n"]]
+    # fc.window_switching_key += [["A-Up", "A-Down"]]
 
     # アクティブウィンドウをディスプレイ間で移動するキーの組み合わせ（前、後 の順）を指定する（複数指定可）
     # （デフォルトキーは、["W-S-Left", "W-S-Right"]）
     fc.window_movement_key_for_displays = []
     fc.window_movement_key_for_displays += [[None, "W-o"]]
+    # fc.window_movement_key_for_displays += [[None, "A-S-o"]]
 
     # ウィンドウを最小化、リストアするキーの組み合わせ（リストア、最小化 の順）を指定する（複数指定可）
     fc.window_minimize_key = []
@@ -564,11 +642,12 @@ def configure(keymap):
     # fc.desktop_switching_key += [["W-Left", "W-Right"]]
 
     # アクティブウィンドウを仮想デスクトップ間で移動するキーの組み合わせ（前、後 の順）を指定する（複数指定可）
-    # （本機能を利用する場合は、Microsoft Store から SylphyHorn をインストールしてください。
-    #   Windows 10 では動作を確認しておりますが、Windows 11 では正常に動作しないようです。）
-    # （デフォルトキーは、["W-C-A-Left", "W-C-A-Right"] です。この設定は変更しないでください）
-    # （仮想デスクトップ切り替え時の通知を ON にすると処理が重くなります。代わりに、トレイアイコンに
-    #   デスクトップ番号を表示する機能を ON にすると良いようです。）
+    # （本機能を利用する場合は、次のページから SylphyHornPlus をインストールしてください。
+    #   ・https://github.com/hwtnb/SylphyHornPlusWin11/releases
+    #   SylphyHornPlus は、Microsoft Store からインストール可能な SylphyHorn の Fork で、Windows 11 の
+    #   対応など、改良が加えられたものとなっています。）
+    # （アクティブウィンドウを仮想デスクトップ間で移動するためのデフォルトキーは、["W-C-A-Left", "W-C-A-Right"]
+    #   です。この設定は変更しないでください。）
     fc.window_movement_key_for_desktops = []
     # fc.window_movement_key_for_desktops += [["W-p", "W-n"]]
     # fc.window_movement_key_for_desktops += [["W-Up", "W-Down"]]
@@ -626,13 +705,14 @@ def configure(keymap):
     fakeymacs.clipboard_hook = True
     fakeymacs.last_keys = [None, None]
     fakeymacs.correct_ime_status = False
+    fakeymacs.window_list = []
 
     def is_emacs_target(window):
         last_window  = fakeymacs.last_window
         process_name = window.getProcessName()
         class_name   = window.getClassName()
 
-        if window != last_window:
+        if window is not last_window:
             if (process_name in fc.not_clipboard_target or
                 any([checkWindow(None, c, None, window) for c in fc.not_clipboard_target_class])):
                 # クリップボードの監視用のフックを無効にする
@@ -666,11 +746,20 @@ def configure(keymap):
             fakeymacs.ime_cancel = False
             fakeymacs.last_window = window
 
+        fakeymacs.is_keymap_decided = False
+
         if is_task_switching_window(window):
+            fakeymacs.is_keymap_decided = True
             return False
 
         if is_list_window(window):
+            fakeymacs.is_keymap_decided = True
             return False
+
+        if window is not last_window:
+            ime_status = window.getImeStatus()
+            setCursorColor(ime_status)
+            popImeBalloon(ime_status, window=window)
 
         if (class_name not in fc.emacs_target_class and
             (process_name in fakeymacs.not_emacs_keybind or
@@ -678,15 +767,21 @@ def configure(keymap):
             fakeymacs.keybind = "not_emacs"
             return False
         else:
-            if window != last_window:
-                popImeBalloon()
+            fakeymacs.is_keymap_decided = True
             fakeymacs.keybind = "emacs"
             return True
 
     def is_ime_target(window):
-        if (window.getClassName() not in fc.emacs_target_class and
+        if (fakeymacs.is_keymap_decided == False and
             (window.getProcessName() in fakeymacs.not_emacs_keybind or
              window.getProcessName() in fc.ime_target)):
+            fakeymacs.is_keymap_decided = True
+            return True
+        else:
+            return False
+
+    def is_other_target(window):
+        if fakeymacs.is_keymap_decided == False:
             return True
         else:
             return False
@@ -697,6 +792,8 @@ def configure(keymap):
     else:
         keymap_emacs = keymap.defineWindowKeymap(check_func=is_emacs_target)
         keymap_ime   = keymap.defineWindowKeymap(check_func=is_ime_target)
+
+    keymap_other = keymap.defineWindowKeymap(check_func=is_other_target)
 
     # Microsoft Word 等では画面に Ctrl ボタンが表示され、Ctrl キーの単押しによりサブウインドウが
     # 開く機能がある。その挙動を抑制するための対策。
@@ -775,45 +872,63 @@ def configure(keymap):
     ##################################################
 
     def enable_input_method():
-        setImeStatus(1)
+        set_input_method(1)
 
     def disable_input_method():
-        setImeStatus(0)
+        set_input_method(0)
 
     def toggle_input_method():
-        setImeStatus(keymap.getWindow().getImeStatus() ^ 1)
+        set_input_method(getImeStatus() ^ 1)
 
-    def setImeStatus(ime_status):
+    def set_input_method(ime_status):
         correctImeStatus()
 
-        if keymap.getWindow().getImeStatus() != ime_status:
+        if getImeStatus() != ime_status:
             # IME を切り替える
-            # （keymap.getWindow().setImeStatus(ime_status) を使わないのは、キーボードマクロの再生時に
-            #   影響がでるため）
+            # （setImeStatus(ime_status) を使わないのは、キーボードマクロの再生時に影響がでるため）
             self_insert_command("A-(25)")()
 
             if fakeymacs.is_playing_kmacro:
                 delay(0.2)
 
+        setCursorColor(ime_status)
         popImeBalloon(ime_status)
+
+    def getImeStatus():
+        return keymap.getWindow().getImeStatus()
+
+    def setImeStatus(ime_status):
+        keymap.getWindow().setImeStatus(ime_status)
+        setCursorColor(ime_status)
 
     def correctImeStatus():
         # Chromium 系ブラウザで発生する問題の対策を行う
         if fakeymacs.correct_ime_status:
-            if keymap.getWindow().getImeStatus():
-                keymap.getWindow().setImeStatus(0) # この行は必要
-                keymap.getWindow().setImeStatus(1)
+            if getImeStatus():
+                setImeStatus(0) # この行は必要
+                setImeStatus(1)
 
-    def popImeBalloon(ime_status=None, force=False):
+    def setCursorColor(ime_status):
+        if fc.use_ime_status_cursor_color:
+            if ime_status:
+                cursor_color = fc.ime_on_cursor_color
+            else:
+                cursor_color = fc.ime_off_cursor_color
+
+            # https://docs.python.org/ja/3/library/winreg.html
+            # https://itasuke.hatenablog.com/entry/2018/01/08/133510
+            with winreg.OpenKeyEx(winreg.HKEY_CURRENT_USER,
+                                  r"SOFTWARE\Microsoft\Accessibility\CursorIndicator",
+                                  access=winreg.KEY_WRITE) as key:
+                winreg.SetValueEx(key, "IndicatorColor", 0, winreg.REG_DWORD, cursor_color)
+
+    def popImeBalloon(ime_status, force=False, window=None):
         if not fakeymacs.is_playing_kmacro:
             if force or fc.use_ime_status_balloon:
                 # LINE アプリなど、Qt5152QWindowIcon にマッチするクラスをもつアプリは入力文字に
                 # バルーンヘルプが被るので、バルーンヘルプの表示対象から外す
                 # （ただし、force が True の場合は除く）
-                if force or not checkWindow(None, "Qt5152QWindowIcon"):
-                    if ime_status is None:
-                        ime_status = keymap.getWindow().getImeStatus()
-
+                if force or not checkWindow(None, "Qt5152QWindowIcon", window=window):
                     if ime_status:
                         message = fc.ime_status_balloon_message[1]
                     else:
@@ -852,7 +967,12 @@ def configure(keymap):
         self_insert_command("C-s")()
 
     def write_file():
-        self_insert_command("A-f", "A-a")()
+        # https://www.sriproot.net/blog/ctrl-shift-s-saveas-922
+        # self_insert_command("C-S-s")()
+
+        self_insert_command("A-f")()
+        delay()
+        self_insert_command("a")()
 
     def dired():
         keymap.ShellExecuteCommand(None, r"explorer.exe", "", "")()
@@ -930,7 +1050,7 @@ def configure(keymap):
         fakeymacs.is_marked = True
 
         def move_beginning_of_region():
-            for i in range(repeat):
+            for _ in range(repeat):
                 backward_word()
 
         mark(move_beginning_of_region, False)()
@@ -942,7 +1062,7 @@ def configure(keymap):
         fakeymacs.is_marked = True
 
         def move_end_of_region():
-            for i in range(repeat):
+            for _ in range(repeat):
                 forward_word()
 
         mark(move_end_of_region, True)()
@@ -973,11 +1093,11 @@ def configure(keymap):
         else:
             def move_end_of_region():
                 if checkWindow("WINWORD.EXE", "_WwG"): # Microsoft Word
-                    for i in range(repeat):
+                    for _ in range(repeat):
                         next_line()
                     move_beginning_of_line()
                 else:
-                    for i in range(repeat - 1):
+                    for _ in range(repeat - 1):
                         next_line()
                     move_end_of_line()
                     forward_char()
@@ -998,7 +1118,7 @@ def configure(keymap):
                     key = "Back"
 
                 delay()
-                for i in range(len(getClipboardText())):
+                for _ in range(len(getClipboardText())):
                     self_insert_command(key)()
         else:
             cutRegion()
@@ -1101,14 +1221,10 @@ def configure(keymap):
         self_insert_command("C-Tab")()
 
     def other_window():
-        window_list = getWindowList()
-        try:
-            for wnd in window_list[1:]:
-                if not wnd.isMinimized():
-                    wnd.getLastActivePopup().setForeground()
-                    break
-        except:
-            pass
+        window_list = getWindowList(False)
+
+        if len(window_list) >= 2:
+            popWindow(window_list[1])()
 
     ##################################################
     ## 文字列検索 / 置換
@@ -1149,7 +1265,7 @@ def configure(keymap):
     ##################################################
 
     def kmacro_start_macro():
-        keymap.getWindow().setImeStatus(0)
+        setImeStatus(0)
         keymap.command_RecordStart()
 
     def kmacro_end_macro():
@@ -1181,7 +1297,7 @@ def configure(keymap):
             # キーボードマクロの最初が IME ON の場合、この delay が必要
             delay(0.2)
             fakeymacs.is_playing_kmacro = True
-            keymap.getWindow().setImeStatus(0)
+            setImeStatus(0)
             keymap.command_RecordPlay()
             fakeymacs.is_playing_kmacro = False
 
@@ -1204,7 +1320,7 @@ def configure(keymap):
     def newline():
         self_insert_command("Enter")()
         if not fc.use_emacs_ime_mode:
-            if keymap.getWindow().getImeStatus():
+            if getImeStatus():
                 fakeymacs.ime_cancel = True
 
     def newline_and_indent():
@@ -1259,8 +1375,9 @@ def configure(keymap):
             fakeymacs.is_digit_argument = True
 
     def shell_command():
+        command_name = os.path.basename(fc.command_name)
         for window in getWindowList():
-            if window.getProcessName() in os.path.basename(fc.command_name):
+            if window.getProcessName() == command_name:
                 popWindow(window)()
                 return
 
@@ -1351,9 +1468,9 @@ def configure(keymap):
         return keyhac_keymap.KeyCondition.strToVk(name)
 
     def addSideOfModifierKey(key):
-        key = re.sub(r'(^|-)(C-)', r'\1' + fc.side_of_ctrl_key + r'\2', key)
-        key = re.sub(r'(^|-)(A-)', r'\1' + fc.side_of_alt_key  + r'\2', key)
-        key = re.sub(r'(^|-)(W-)', r'\1' + fc.side_of_win_key  + r'\2', key)
+        key = re.sub(r"(^|-)(C-)", r"\1" + fc.side_of_ctrl_key + r"\2", key)
+        key = re.sub(r"(^|-)(A-)", r"\1" + fc.side_of_alt_key  + r"\2", key)
+        key = re.sub(r"(^|-)(W-)", r"\1" + fc.side_of_win_key  + r"\2", key)
         return key
 
     def kbd(keys):
@@ -1453,8 +1570,7 @@ def configure(keymap):
                             fakeymacs.last_keys = [window_keymap, keys]
 
                 def _command3():
-                    if (fakeymacs.repeat_counter == 1 or
-                        fakeymacs.is_playing_kmacro):
+                    if fakeymacs.repeat_counter == 1 or fakeymacs.is_playing_kmacro:
                         _command1()
                     else:
                         def _command2():
@@ -1500,7 +1616,7 @@ def configure(keymap):
                 w_keymap[key_list[-1]] = keyCommand(None)
 
     def define_key2(window_keymap, keys, command):
-        define_key(window_keymap, keys, command, False)
+        define_key(window_keymap, keys, command, skip_check=False)
 
     def define_key3(window_keymap, keys, command, check_func):
         define_key(window_keymap, keys, makeKeyCommand(window_keymap, keys, command, check_func))
@@ -1568,7 +1684,7 @@ def configure(keymap):
             correctImeStatus()
             func()
             if fc.use_emacs_ime_mode:
-                if keymap.getWindow().getImeStatus():
+                if getImeStatus():
                     # 次の判定は、数引数を指定して日本語入力をした際に必要
                     if fakeymacs.ei_last_window is None:
                         enable_emacs_ime_mode()
@@ -1578,7 +1694,7 @@ def configure(keymap):
         func = self_insert_command(*keys)
         def _func():
             func()
-            keymap.getWindow().setImeStatus(0)
+            setImeStatus(0)
         return _func
 
     def digit(number):
@@ -1661,7 +1777,7 @@ def configure(keymap):
             # キーボードマクロの繰り返し実行を可能とするために初期化する
             fakeymacs.repeat_counter = 1
 
-            for i in range(repeat_counter):
+            for _ in range(repeat_counter):
                 func()
         return _func
 
@@ -1684,12 +1800,12 @@ def configure(keymap):
         return _func
 
     def princ(str):
-        imeStatus = keymap.getWindow().getImeStatus()
+        imeStatus = getImeStatus()
         if imeStatus:
-            keymap.getWindow().setImeStatus(0)
+            setImeStatus(0)
         keymap.InputTextCommand(str)()
         if imeStatus:
-            keymap.getWindow().setImeStatus(1)
+            setImeStatus(1)
 
     ##################################################
     ## キーバインド
@@ -1783,13 +1899,23 @@ def configure(keymap):
     define_key(keymap_emacs, "C-u", universal_argument)
 
     ## 「IME の切り替え」のキー設定
-    define_key(keymap_emacs, "(243)",  toggle_input_method)
-    define_key(keymap_emacs, "(244)",  toggle_input_method)
-    define_key(keymap_emacs, "A-(25)", toggle_input_method)
+    define_key(keymap_emacs, "(243)",   toggle_input_method)
+    define_key(keymap_emacs, "(244)",   toggle_input_method)
+    define_key(keymap_emacs, "A-(25)",  toggle_input_method)
+    define_key(keymap_emacs, "(240)",   toggle_input_method)
+    define_key(keymap_emacs, "S-(240)", toggle_input_method)
 
-    define_key(keymap_ime,   "(243)",  toggle_input_method)
-    define_key(keymap_ime,   "(244)",  toggle_input_method)
-    define_key(keymap_ime,   "A-(25)", toggle_input_method)
+    define_key(keymap_ime,   "(243)",   toggle_input_method)
+    define_key(keymap_ime,   "(244)",   toggle_input_method)
+    define_key(keymap_ime,   "A-(25)",  toggle_input_method)
+    define_key(keymap_ime,   "(240)",   toggle_input_method)
+    define_key(keymap_ime,   "S-(240)", toggle_input_method)
+
+    define_key(keymap_other, "(243)",   toggle_input_method)
+    define_key(keymap_other, "(244)",   toggle_input_method)
+    define_key(keymap_other, "A-(25)",  toggle_input_method)
+    define_key(keymap_other, "(240)",   toggle_input_method)
+    define_key(keymap_other, "S-(240)", toggle_input_method)
 
     ## 「ファイル操作」のキー設定
     define_key(keymap_emacs, "Ctl-x C-f", reset_search(reset_undo(reset_counter(reset_mark(find_file)))))
@@ -2101,9 +2227,11 @@ def configure(keymap):
                         define_key2(keymap_ei, mkey, self_insert_command(mkey))
 
         ## 「IME の切り替え」のキー設定
-        define_key(keymap_ei, "(243)",  ei_disable_input_method)
-        define_key(keymap_ei, "(244)",  ei_disable_input_method)
-        define_key(keymap_ei, "A-(25)", ei_disable_input_method)
+        define_key(keymap_ei, "(243)",   ei_disable_input_method)
+        define_key(keymap_ei, "(244)",   ei_disable_input_method)
+        define_key(keymap_ei, "A-(25)",  ei_disable_input_method)
+        define_key(keymap_ei, "(240)",   ei_disable_input_method)
+        define_key(keymap_ei, "S-(240)", ei_disable_input_method)
 
         ## Escキーの設定
         define_key(keymap_ei, "Esc",           ei_esc)
@@ -2153,7 +2281,7 @@ def configure(keymap):
 
 
     ###########################################################################
-    ## Emacs キーバインドの切り替えのキー設定
+    ## 「Emacs キーバインドの切り替え」のキー設定
     ###########################################################################
 
     keymap_global = keymap.defineWindowKeymap()
@@ -2205,58 +2333,87 @@ def configure(keymap):
     ## ウィンドウ操作（デスクトップ用）
     ##################################################
 
-    def popWindow(wnd):
+    def popWindow(window):
         def _func():
             try:
-                if wnd.isMinimized():
-                    wnd.restore()
+                if window.isMinimized():
+                    window.restore()
 
-                # ウィンドウフォーカスが適切に移動しない場合があることの対策
-                self_insert_command("Shift")() # 何かのキーを押下すると良いようだ
-
-                wnd.getLastActivePopup().setForeground()
+                window.getLastActivePopup().setForeground()
             except:
                 print("選択したウィンドウは存在しませんでした")
+
+            fakeymacs.window_list = []
         return _func
 
-    def getWindowList():
-        def makeWindowList(wnd, arg):
-            if wnd.isVisible() and not wnd.getOwner():
+    def getWindowList(minimized_window=None):
+        def makeWindowList(window, arg):
+            nonlocal window_title
 
-                class_name = wnd.getClassName()
-                title = wnd.getText()
+            if window.isVisible() and not window.getOwner():
+                class_name = window.getClassName()
+                title = re.sub(r".* ‎- ", r"", window.getText())
 
                 if class_name == "Emacs" or title != "":
                     if not re.match(fc.window_operation_exclusion_class, class_name):
-                        process_name = wnd.getProcessName()
+                        process_name = window.getProcessName()
+
                         if not re.match(fc.window_operation_exclusion_process, process_name):
-                            # 表示されていないストアアプリ（「設定」等）が window_list に登録されるのを抑制する
+
+                            # バックグラウンドで起動している UWPアプリが window_list に登録されるのを抑制する
+                            # （http://mrxray.on.coocan.jp/Delphi/plSamples/320_AppList.htm）
+                            # （http://mrxray.on.coocan.jp/Delphi/plSamples/324_CheckRun_UWPApp.htm）
+
                             if class_name == "Windows.UI.Core.CoreWindow":
-                                if title in window_dict:
-                                    if window_dict[title] in window_list:
-                                        window_list.remove(window_dict[title])
-                                else:
-                                    window_dict[title] = wnd
+                                window_title = title
 
                             elif class_name == "ApplicationFrameWindow":
-                                if title not in window_dict:
-                                    window_dict[title] = wnd
-                                    window_list.append(wnd)
+                                if title != "Cortana":
+                                    if (title != window_title or window.isMinimized() or
+                                        window in fakeymacs.window_list): # UWPアプリの仮想デスクトップ対策
+                                        window_list.append(window)
+                                window_title = None
                             else:
-                                window_list.append(wnd)
+                                window_list.append(window)
             return True
 
-        window_dict = {}
+        window_title = None
         window_list = []
         Window.enum(makeWindowList, None)
 
-        return window_list
+        if minimized_window is None:
+            window_list2 = window_list
+        else:
+            window_list2 = []
+            for window in window_list:
+                if ((minimized_window and window.isMinimized()) or
+                    (not minimized_window and not window.isMinimized())):
+                    window_list2.append(window)
+
+        return window_list2
+
+    def saveWindowList():
+        window_list = getWindowList(False)
+
+        # ２つのリストに差異があるか？
+        if set(window_list) ^ set(fakeymacs.window_list):
+            fakeymacs.window_list = window_list
 
     def previous_window():
-        self_insert_command("A-S-Tab")()
+        saveWindowList()
+
+        if fakeymacs.window_list:
+            window_list = fakeymacs.window_list[-1:] + fakeymacs.window_list[:-1]
+            popWindow(window_list[0])()
+            fakeymacs.window_list = window_list
 
     def next_window():
-        self_insert_command("A-Tab")()
+        saveWindowList()
+
+        if fakeymacs.window_list:
+            window_list = fakeymacs.window_list[1:] + fakeymacs.window_list[:1]
+            popWindow(window_list[0])()
+            fakeymacs.window_list = window_list
 
     def move_window_to_previous_display():
         self_insert_command("W-S-Left")()
@@ -2265,27 +2422,23 @@ def configure(keymap):
         self_insert_command("W-S-Right")()
 
     def minimize_window():
-        wnd = keymap.getTopLevelWindow()
-        if wnd and not wnd.isMinimized():
-            wnd.minimize()
+        window = keymap.getTopLevelWindow()
+        if window and not window.isMinimized():
+            window.minimize()
             delay()
             window_list = getWindowList()
-            if wnd in window_list:
-                if wnd is window_list[-1]:
+            if window in window_list:
+                if window is window_list[-1]:
                     fakeymacs.reverse_window_to_restore = False
                 else:
                     fakeymacs.reverse_window_to_restore = True
 
     def restore_window():
-        window_list = getWindowList()
-
-        if not fakeymacs.reverse_window_to_restore:
-            window_list.reverse()
-
-        for wnd in window_list:
-            if wnd.isMinimized():
-                wnd.restore()
-                break
+        window_list = getWindowList(True)
+        if window_list:
+            if not fakeymacs.reverse_window_to_restore:
+                window_list.reverse()
+            window_list[0].restore()
 
     def previous_desktop():
         self_insert_command("W-C-Left")()
@@ -2628,9 +2781,15 @@ def configure(keymap):
             if window_list:
                 process_name_length = max(map(len, map(Window.getProcessName, window_list)))
 
-                formatter = "{0:" + str(process_name_length) + "} | {1}"
-                for wnd in window_list:
-                    window_items.append([formatter.format(wnd.getProcessName(), wnd.getText()), popWindow(wnd)])
+                formatter = "{0:" + str(process_name_length) + "} |{1:1}| {2}"
+                for window in window_list:
+                    if window.isMinimized():
+                        icon = "m"
+                    else:
+                        icon = ""
+
+                    window_items.append([formatter.format(window.getProcessName(),
+                                                          icon, window.getText()), popWindow(window)])
 
             window_items.append([list_formatter.format("<Desktop>"),
                                  keymap.ShellExecuteCommand(None, r"shell:::{3080F90D-D7AD-11D9-BD98-0000947B0257}", "", "")])
@@ -2665,3 +2824,16 @@ def configure(keymap):
 
     # 個人設定ファイルのセクション [section-extensions] を読み込んで実行する
     exec(readConfigPersonal("[section-extensions]"), dict(globals(), **locals()))
+
+
+    ####################################################################################################
+    ## 後処理（キーマップの優先順位を調整する）
+    ####################################################################################################
+
+    keymap.window_keymap_list.remove(keymap_global)
+    keymap.window_keymap_list.remove(keymap_tsw)
+    keymap.window_keymap_list.remove(keymap_lw)
+
+    keymap.window_keymap_list.append(keymap_global)
+    keymap.window_keymap_list.append(keymap_tsw)
+    keymap.window_keymap_list.append(keymap_lw)
