@@ -169,10 +169,11 @@ def configure(keymap):
     # OS に設定しているキーボードタイプが日本語キーボードかどうかを設定する（自動設定）
     # （True: 日本語キーボード、False: 英語キーボード）
     # （http://tokovalue.jp/function/GetKeyboardType.htm）
-    if ctypes.windll.user32.GetKeyboardType(0) == 7:
-        is_japanese_keyboard = True
-    else:
-        is_japanese_keyboard = False
+    # if ctypes.windll.user32.GetKeyboardType(0) == 7:
+    #     is_japanese_keyboard = True
+    # else:
+    #     is_japanese_keyboard = False
+    is_japanese_keyboard = False
 
     # ウィンドウフォーカスが変わった時、すぐに Keyhac に検知させるための設定を行う
     # （IME の状態をテキスト カーソル インジケーターの色で表現するためにこの機能を追加した）
@@ -271,6 +272,67 @@ def configure(keymap):
     # 個人設定ファイルのセクション [section-init] を読み込んで実行する
     exec(readConfigPersonal("[section-init]"), dict(globals(), **locals()))
 
+
+    ####################################################################################################
+    ## 日本語キーボードドライバで英語配列を使う
+    ####################################################################################################
+    def km_for_hhk( km ):
+        # S-2 => @
+        # kmg[ "S-2" ] = "(192)"
+        define_key(km, "S-2",  self_insert_command("(192)"))
+        # S-6 => ^
+        # kmg[ "S-6" ] = "(222)"
+        define_key(km, "S-6",  self_insert_command("(222)"))
+        # S-7 => &
+        # kmg[ "S-7" ] = "S-6"
+        define_key(km, "S-7",  self_insert_command("S-6"))
+        # S-8 => *
+        # kmg[ "S-8" ] = "S-(186)"
+        define_key(km, "S-8",  self_insert_command("S-(186)"))
+        # S-9 => (
+        # kmg[ "S-9" ] = "S-8"
+        define_key(km, "S-9",  self_insert_command("S-8"))
+        # S-0 => )
+        # kmg[ "S-0" ] = "S-9"
+        define_key(km, "S-0",  self_insert_command("S-9"))
+        # S-- => _
+        # kmg[ "S-Minus" ] = "S-(226)"
+        define_key(km, "S-Minus",  self_insert_command("S-(226)"))
+        # ^ => =
+        # kmg[ "(222)" ] = "S-Minus"
+        define_key(km, "(222)",  self_insert_command("S-Minus"))
+        # S-^ => +
+        # kmg[ "S-(222)" ] = "S-Plus"
+        define_key(km, "S-(222)",  self_insert_command("S-Plus"))
+        # 半角/全角 => `
+        #kmg[ "(243)" ] = "S-(192)"
+        define_key(km, "(243)",  self_insert_command("S-(192)"))
+        # kmg[ "(244)" ] = "S-(192)"
+        define_key(km, "(244)",  self_insert_command("S-(192)"))
+        # S-半角/全角 => ~
+        # kmg[ "S-(243)" ] = "S-(222)"
+        define_key(km, "S-(243)",  self_insert_command("S-(222)"))
+        # kmg[ "S-(244)" ] = "S-(222)"
+        define_key(km, "S-(244)",  self_insert_command("S-(222)"))
+        # S-; => :
+        # kmg[ "S-Plus"  ] = "(186)"
+        define_key(km, "S-Plus",  self_insert_command("(186)"))
+        # : => '
+        # kmg[ "(186)"  ] = "S-7"
+        define_key(km, "(186)",  self_insert_command("S-7"))
+        # S-: => "
+        # kmg[ "S-(186)"  ] = "S-2"
+        define_key(km, "S-(186)",  self_insert_command("S-2"))
+
+    # [ => \
+    # S-[ => |
+    keymap.replaceKey( "(221)", "(220)" )
+    # [ => ]
+    # S-[ => }
+    keymap.replaceKey( "(219)", "(221)" )
+    # @ => [
+    # S-@ => {
+    keymap.replaceKey( "(192)", "(219)" )
 
     ####################################################################################################
     ## 機能オプションの選択
@@ -2288,6 +2350,7 @@ def configure(keymap):
 
     define_key(keymap_global, fc.toggle_emacs_keybind_key, toggle_emacs_keybind)
 
+    km_for_hhk( keymap_global )
 
     ###########################################################################
     ## アプリケーションキーの設定
